@@ -102,16 +102,25 @@ class FaceRestoration:
                     paste_back=True,
                     weight=self.code_former_weight
                 )
-                logger.debug(f"CodeFormer result type: {type(result)}, length: {len(result) if isinstance(result, tuple) else 'N/A'}")
+                logger.debug(f"CodeFormer result type: {type(result)}, length: {len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
                 # Handle different return formats - CodeFormer can return multiple values
                 if isinstance(result, tuple):
                     if len(result) >= 1:
                         restored_image = result[0]
+                        logger.debug(f"CodeFormer tuple[0] type: {type(restored_image)}")
                     else:
                         logger.error("CodeFormer returned empty tuple")
                         return image
+                elif isinstance(result, list):
+                    if len(result) >= 1:
+                        restored_image = result[0]
+                        logger.debug(f"CodeFormer list[0] type: {type(restored_image)}")
+                    else:
+                        logger.error("CodeFormer returned empty list")
+                        return image
                 else:
                     restored_image = result
+                    logger.debug(f"CodeFormer direct result type: {type(restored_image)}")
             else:
                 # GFPGAN processing
                 result = self.model.enhance(
@@ -120,19 +129,45 @@ class FaceRestoration:
                     only_center_face=False, 
                     paste_back=True
                 )
-                logger.debug(f"GFPGAN result type: {type(result)}, length: {len(result) if isinstance(result, tuple) else 'N/A'}")
+                logger.debug(f"GFPGAN result type: {type(result)}, length: {len(result) if isinstance(result, (tuple, list)) else 'N/A'}")
                 # Handle different return formats - GFPGAN can return multiple values
                 if isinstance(result, tuple):
                     if len(result) >= 1:
                         restored_image = result[0]
+                        logger.debug(f"GFPGAN tuple[0] type: {type(restored_image)}")
                     else:
                         logger.error("GFPGAN returned empty tuple")
                         return image
+                elif isinstance(result, list):
+                    if len(result) >= 1:
+                        restored_image = result[0]
+                        logger.debug(f"GFPGAN list[0] type: {type(restored_image)}")
+                    else:
+                        logger.error("GFPGAN returned empty list")
+                        return image
                 else:
                     restored_image = result
+                    logger.debug(f"GFPGAN direct result type: {type(restored_image)}")
+            
+            # Handle different return types from the model
+            if isinstance(restored_image, list):
+                # If it's a list, take the first element
+                if len(restored_image) > 0:
+                    restored_image = restored_image[0]
+                else:
+                    logger.error("Model returned empty list")
+                    return image
+            
+            # Convert to numpy array if it's not already
+            if not isinstance(restored_image, np.ndarray):
+                try:
+                    restored_image = np.array(restored_image)
+                except Exception as e:
+                    logger.error(f"Failed to convert result to numpy array: {e}")
+                    return image
             
             # Ensure output is uint8
-            if restored_image.dtype != np.uint8:
+            if hasattr(restored_image, 'dtype') and restored_image.dtype != np.uint8:
                 restored_image = np.clip(restored_image, 0, 255).astype(np.uint8)
             
             return restored_image
