@@ -7,9 +7,14 @@ import torch
 from pkg_resources import resource_filename
 
 # Import local modules
-import audio
-import face_detection
-from models import Wav2Lip
+try:
+    from . import audio
+    from . import face_detection
+    from .models import Wav2Lip
+except ImportError:
+    import audio
+    import face_detection
+    from models import Wav2Lip
 
 
 class W2l:

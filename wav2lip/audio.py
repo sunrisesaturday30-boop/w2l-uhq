@@ -3,7 +3,10 @@ import librosa.filters
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile
-from scripts.wav2lip.hparams import hparams as hp
+try:
+    from .hparams import hparams as hp
+except ImportError:
+    from hparams import hparams as hp
 
 
 def load_wav(path, sr):
