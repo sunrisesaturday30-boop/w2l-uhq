@@ -67,10 +67,15 @@ class FaceAlignment:
             if len(d) == 0:
                 results.append(None)
                 continue
-            d = d[0]
-            d = np.clip(d, 0, None)
+            
+            # Check if d has elements before accessing
+            if len(d) > 0:
+                d = d[0]
+                d = np.clip(d, 0, None)
 
-            x1, y1, x2, y2 = map(int, d[:-1])
-            results.append((x1, y1, x2, y2))
+                x1, y1, x2, y2 = map(int, d[:-1])
+                results.append((x1, y1, x2, y2))
+            else:
+                results.append(None)
 
         return results
