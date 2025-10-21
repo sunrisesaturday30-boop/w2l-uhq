@@ -190,7 +190,9 @@ class Wav2LipUHQ:
             w2l_frame_to_restore = cv2.cvtColor(w2l_frame, cv2.COLOR_BGR2RGB)
             image_restored = restore_faces(w2l_frame_to_restore, 
                                          model_name=self.face_restore_model,
-                                         code_former_weight=self.code_former_weight)
+                                         code_former_weight=self.code_former_weight,
+                                         device=self.device,
+                                         low_vram=False)
 
             image_restored2 = cv2.cvtColor(image_restored, cv2.COLOR_RGB2BGR)
             cv2.imwrite(face_enhanced_path + "face_restore_" + f_number + ".png", image_restored2)
@@ -199,11 +201,20 @@ class Wav2LipUHQ:
             # Detect faces
             rects = detector.get_detections_for_batch(np.array([np.array(image_restored2)]))
 
+            # Check if any faces were detected
+            if not rects or all(rect is None for rect in rects):
+                logger.warning("No faces detected in frame, skipping quality enhancement")
+                continue
+
             # Initialize mask
             mask = np.zeros_like(original_gray)
 
             # Process each detected face
             for (i, rect) in enumerate(rects):
+                # Skip if no face detected
+                if rect is None:
+                    continue
+                    
                 # Get face coordinates
                 if not self.only_mouth:
                     shape = predictor(original_gray, dlib.rectangle(*rect))
