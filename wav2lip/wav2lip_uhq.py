@@ -9,6 +9,10 @@ from imutils import face_utils
 import subprocess
 from pkg_resources import resource_filename
 import sys
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Add core module to path for face restoration
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'core'))
@@ -219,15 +223,31 @@ class Wav2LipUHQ:
                 if not self.only_mouth:
                     shape = predictor(original_gray, dlib.rectangle(*rect))
                     shape = face_utils.shape_to_np(shape)
-                    jaw = shape[jstart:jend][1:-1]
-                    nose = shape[nstart:nend][2]
+                    
+                    # Check bounds before accessing
+                    if len(shape) > jend and jend > jstart:
+                        jaw = shape[jstart:jend][1:-1] if len(shape[jstart:jend]) > 2 else shape[jstart:jend]
+                    else:
+                        logger.warning(f"Not enough facial landmarks for jaw detection: {len(shape)} points")
+                        continue
+                    
+                    if len(shape) > nend and nend > nstart and len(shape[nstart:nend]) > 2:
+                        nose = shape[nstart:nend][2]
+                    else:
+                        logger.warning(f"Not enough facial landmarks for nose detection: {len(shape)} points")
+                        continue
 
                 # Get mouth coordinates
                 shape = predictor(image_restored_gray, dlib.rectangle(*rect))
                 shape = face_utils.shape_to_np(shape)
 
-                mouth = shape[mstart:mend][:-8]
-                mouth = np.delete(mouth, [3], axis=0)
+                # Check bounds before accessing mouth landmarks
+                if len(shape) > mend and mend > mstart and len(shape[mstart:mend]) > 8:
+                    mouth = shape[mstart:mend][:-8]
+                    mouth = np.delete(mouth, [3], axis=0)
+                else:
+                    logger.warning(f"Not enough facial landmarks for mouth detection: {len(shape)} points")
+                    continue
                 if self.mouth_mask_dilatation > 0:
                     mouth = self.dilate_mouth(mouth, original_gray.shape[0], original_gray.shape[1])
 
