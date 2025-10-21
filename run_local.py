@@ -80,6 +80,18 @@ def main():
     else:
         logging.getLogger().setLevel(logging.INFO)
     
+    # Enable traceback for better error debugging
+    import traceback
+    import sys
+    def excepthook(type, value, tb):
+        logger.error(f"Uncaught exception: {type.__name__}: {value}")
+        logger.error("Full traceback:")
+        for line in traceback.format_tb(tb):
+            logger.error(line.strip())
+        sys.exit(1)
+    
+    sys.excepthook = excepthook
+    
     try:
         # Check or download models if requested
         if args.check_models:
@@ -120,23 +132,32 @@ def main():
         
         # Process video
         logger.info("Starting video processing...")
-        result_path = processor.process_video(
-            video_path=args.video,
-            audio_path=args.audio,
-            checkpoint=args.checkpoint,
-            face_restore_model=args.face_restore_model,
-            no_smooth=args.no_smooth,
-            only_mouth=args.only_mouth,
-            resize_factor=args.resize_factor,
-            pad_top=args.pad_top,
-            pad_bottom=args.pad_bottom,
-            pad_left=args.pad_left,
-            pad_right=args.pad_right,
-            mouth_mask_dilate=args.mouth_mask_dilate,
-            face_mask_erode=args.face_mask_erode,
-            mask_blur=args.mask_blur,
-            code_former_fidelity=args.code_former_fidelity
-        )
+        try:
+            result_path = processor.process_video(
+                video_path=args.video,
+                audio_path=args.audio,
+                checkpoint=args.checkpoint,
+                face_restore_model=args.face_restore_model,
+                no_smooth=args.no_smooth,
+                only_mouth=args.only_mouth,
+                resize_factor=args.resize_factor,
+                pad_top=args.pad_top,
+                pad_bottom=args.pad_bottom,
+                pad_left=args.pad_left,
+                pad_right=args.pad_right,
+                mouth_mask_dilate=args.mouth_mask_dilate,
+                face_mask_erode=args.face_mask_erode,
+                mask_blur=args.mask_blur,
+                code_former_fidelity=args.code_former_fidelity
+            )
+        except Exception as e:
+            logger.error(f"Processing failed with error: {e}")
+            logger.error("Full traceback:")
+            import traceback
+            for line in traceback.format_exc().split('\n'):
+                if line.strip():
+                    logger.error(line.strip())
+            raise
         
         # Copy result to output path
         import shutil
