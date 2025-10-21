@@ -31,9 +31,12 @@ class Wav2LipUHQ:
         if temp_dir:
             self.temp_dir = temp_dir
             self.w2l_video = os.path.join(temp_dir, 'wav2lip_result.mp4')
+            # Keep original wav2lip folder for model paths
+            self.original_wav2lip_folder = self.wav2lip_folder
         else:
             self.w2l_video = self.wav2lip_folder + '/results/result_voice.mp4'
             self.temp_dir = os.path.join(self.wav2lip_folder, 'temp')
+            self.original_wav2lip_folder = self.wav2lip_folder
             
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.ffmpeg_binary = self.find_ffmpeg_binary()
@@ -70,42 +73,45 @@ class Wav2LipUHQ:
 
     def create_video_from_images(self, nb_frames):
         fps = str(self.get_framerate(self.w2l_video))
+        output_dir = os.path.join(self.temp_dir, 'output')
         command = [self.ffmpeg_binary, "-y", "-framerate", fps, "-start_number", "0", "-i",
-                   self.wav2lip_folder + "/output/final/output_%05d.png", "-vframes",
+                   os.path.join(output_dir, "final", "output_%05d.png"), "-vframes",
                    str(nb_frames), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-b:v", "8000k",
-                   self.wav2lip_folder + "/output/video.mp4"]
+                   os.path.join(output_dir, "video.mp4")]
 
         self.execute_command(command)
 
         command = [self.ffmpeg_binary, "-y", "-framerate", fps, "-start_number", "0", "-i",
-                   self.wav2lip_folder + "/output/face_enhanced/face_restore_%05d.png", "-vframes",
+                   os.path.join(output_dir, "face_enhanced", "face_restore_%05d.png"), "-vframes",
                    str(nb_frames), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-b:v", "8000k",
-                   self.wav2lip_folder + "/output/video_enhanced.mp4"]
+                   os.path.join(output_dir, "video_enhanced.mp4")]
 
         self.execute_command(command)
 
     def extract_audio_from_video(self):
+        output_dir = os.path.join(self.temp_dir, 'output')
         command = [self.ffmpeg_binary, "-y", "-i", self.w2l_video, "-vn", "-acodec", "copy",
-                   self.wav2lip_folder + "/output/output_audio.aac"]
+                   os.path.join(output_dir, "output_audio.aac")]
         self.execute_command(command)
 
     def add_audio_to_video(self):
-        command = [self.ffmpeg_binary, "-y", "-i", self.wav2lip_folder + "/output/video.mp4", "-i",
-                   self.wav2lip_folder + "/output/output_audio.aac", "-c:v", "copy", "-c:a", "aac", "-strict",
-                   "experimental", self.wav2lip_folder + "/output/output_video.mp4"]
+        output_dir = os.path.join(self.temp_dir, 'output')
+        command = [self.ffmpeg_binary, "-y", "-i", os.path.join(output_dir, "video.mp4"), "-i",
+                   os.path.join(output_dir, "output_audio.aac"), "-c:v", "copy", "-c:a", "aac", "-strict",
+                   "experimental", os.path.join(output_dir, "output_video.mp4")]
         self.execute_command(command)
 
-        command = [self.ffmpeg_binary, "-y", "-i", self.wav2lip_folder + "/output/video_enhanced.mp4", "-i",
-                   self.wav2lip_folder + "/output/output_audio.aac", "-c:v", "copy", "-c:a", "aac", "-strict",
-                   "experimental", self.wav2lip_folder + "/output/output_video_enhanced.mp4"]
+        command = [self.ffmpeg_binary, "-y", "-i", os.path.join(output_dir, "video_enhanced.mp4"), "-i",
+                   os.path.join(output_dir, "output_audio.aac"), "-c:v", "copy", "-c:a", "aac", "-strict",
+                   "experimental", os.path.join(output_dir, "output_video_enhanced.mp4")]
         self.execute_command(command)
 
     def initialize_dlib_predictor(self):
         print("[INFO] Loading the predictor...")
         detector = face_detection.FaceAlignment(face_detection.LandmarksType._2D,
                                                 flip_input=False, device=self.device)
-        # Update path to use weights folder
-        weights_dir = os.path.join(os.path.dirname(self.wav2lip_folder), 'weights')
+        # Update path to use weights folder - use original wav2lip folder, not temp dir
+        weights_dir = os.path.join(os.path.dirname(self.original_wav2lip_folder), 'weights')
         predictor_path = os.path.join(weights_dir, 'predicator', 'shape_predictor_68_face_landmarks.dat')
         predictor = dlib.shape_predictor(predictor_path)
         return detector, predictor
@@ -126,7 +132,8 @@ class Wav2LipUHQ:
         return dilated_points
 
     def execute(self, resume=False):
-        output_dir = self.wav2lip_folder + '/output/'
+        # Use temp directory for output paths
+        output_dir = os.path.join(self.temp_dir, 'output') + '/'
         debug_path = output_dir + "debug/"
         face_enhanced_path = output_dir + "face_enhanced/"
         final_path = output_dir + 'final/'
@@ -140,8 +147,9 @@ class Wav2LipUHQ:
 
         frame_number = 0
         if resume:
-            if os.path.exists(self.wav2lip_folder + "/resume.json"):
-                with open(self.wav2lip_folder + "/resume.json", "r") as f:
+            resume_file = os.path.join(self.temp_dir, "resume.json")
+            if os.path.exists(resume_file):
+                with open(resume_file, "r") as f:
                     parameters = json.load(f)
                 # Read frame
                 for f in range(parameters["frame"]):
