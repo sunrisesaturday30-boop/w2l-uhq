@@ -132,7 +132,15 @@ class Wav2LipUHQ:
         kernel = np.ones((self.mouth_mask_dilatation, self.mouth_mask_dilatation), np.uint8)
         dilated_mask = cv2.dilate(mask, kernel, iterations=1)
         contours, _ = cv2.findContours(dilated_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        dilated_points = contours[0].squeeze()
+        
+        # Check if any contours were found
+        if len(contours) == 0:
+            logger.warning("No contours found in dilated mouth mask, returning original mouth points")
+            return mouth
+        
+        # Use the largest contour
+        largest_contour = max(contours, key=cv2.contourArea)
+        dilated_points = largest_contour.squeeze()
         return dilated_points
 
     def execute(self, resume=False):
