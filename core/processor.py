@@ -138,15 +138,13 @@ class Wav2LipProcessor:
                 pad_bottom=pad_values[1], 
                 pad_left=pad_values[2],
                 pad_right=pad_values[3],
-                face_swap_img=None
+                face_swap_img=None,
+                temp_dir=self.temp_dir
             )
             
             # Override batch sizes for performance
             w2l.face_det_batch_size = self.face_det_batch_size
             w2l.wav2lip_batch_size = self.wav2lip_batch_size
-            
-            # Set output path
-            w2l.outfile = os.path.join(self.temp_dir, "wav2lip_result.mp4")
             
             # Execute Wav2Lip
             w2l.execute()
@@ -184,7 +182,8 @@ class Wav2LipProcessor:
                 face_swap_img=None,
                 resize_factor=resize_factor,
                 code_former_weight=code_former_weight,
-                debug=self.debug
+                debug=self.debug,
+                temp_dir=self.temp_dir
             )
             
             # Set paths
