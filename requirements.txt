@@ -1,0 +1,32 @@
+# Wav2Lip UHQ Dependencies
+# Optimized for maximum speed on T4/L40S/A100/H100 GPUs
+
+# Core ML frameworks
+torch==2.0.1
+torchvision==0.15.2
+numpy==1.23.5
+
+# Computer Vision
+opencv-python==4.8.0.76
+opencv-contrib-python==4.8.0.76
+pillow==10.0.0
+
+# Audio processing
+librosa==0.10.0.post2
+scipy==1.10.1
+
+# Face detection and landmarks
+dlib-bin==19.24.2
+imutils==0.5.4
+
+# Utilities
+tqdm==4.66.1
+numba==0.57.1
+imageio_ffmpeg==0.4.9
+requests==2.31.0
+
+# Face restoration (CodeFormer/GFPGAN)
+basicsr==1.4.2
+facexlib==0.3.0
+gfpgan==1.3.8
+realesrgan==0.3.0
