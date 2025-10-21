@@ -18,7 +18,7 @@ except ImportError:
 
 
 class W2l:
-    def __init__(self, face, audio, checkpoint, nosmooth, resize_factor, pad_top, pad_bottom, pad_left, pad_right, face_swap_img):
+    def __init__(self, face, audio, checkpoint, nosmooth, resize_factor, pad_top, pad_bottom, pad_left, pad_right, face_swap_img, temp_dir=None):
         self.wav2lip_folder = os.path.sep.join(os.path.abspath(__file__).split(os.path.sep)[:-1])
         self.static = False
         if os.path.isfile(face) and face.split('.')[1] in ['jpg', 'png', 'jpeg']:
@@ -43,7 +43,15 @@ class W2l:
         # Update path to use weights folder
         weights_dir = os.path.join(os.path.dirname(self.wav2lip_folder), 'weights')
         self.checkpoint_path = os.path.join(weights_dir, 'wav2lip', self.checkpoint + '.pth')
-        self.outfile = self.wav2lip_folder + '/results/result_voice.mp4'
+        
+        # Use temp directory if provided, otherwise use default
+        if temp_dir:
+            self.temp_dir = temp_dir
+            self.outfile = os.path.join(temp_dir, 'wav2lip_result.mp4')
+        else:
+            self.outfile = self.wav2lip_folder + '/results/result_voice.mp4'
+            self.temp_dir = os.path.join(self.wav2lip_folder, 'temp')
+        
         print('Using {} for inference.'.format(self.device))
         self.ffmpeg_binary = self.find_ffmpeg_binary()
 
@@ -265,7 +273,10 @@ class W2l:
                 print("Model loaded")
 
                 frame_h, frame_w = full_frames[0].shape[:-1]
-                out = cv2.VideoWriter(self.wav2lip_folder + '/temp/result.avi',
+                # Ensure temp directory exists
+                os.makedirs(self.temp_dir, exist_ok=True)
+                temp_video_path = os.path.join(self.temp_dir, 'result.avi')
+                out = cv2.VideoWriter(temp_video_path,
                                       cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
 
             img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(self.device)
@@ -290,6 +301,7 @@ class W2l:
         torch.cuda.empty_cache()
         gc.collect()
 
-        command = [self.ffmpeg_binary, "-y", "-i", self.audio, "-i", self.wav2lip_folder + '/temp/result.avi',
+        temp_video_path = os.path.join(self.temp_dir, 'result.avi')
+        command = [self.ffmpeg_binary, "-y", "-i", self.audio, "-i", temp_video_path,
                    "-strict", "-2", "-q:v", "1", self.outfile]
         self.execute_command(command)
