@@ -225,16 +225,25 @@ class Wav2LipUHQ:
                     shape = face_utils.shape_to_np(shape)
                     
                     # Check bounds before accessing
-                    if len(shape) > jend and jend > jstart:
-                        jaw = shape[jstart:jend][1:-1] if len(shape[jstart:jend]) > 2 else shape[jstart:jend]
+                    if len(shape) >= jend and jend > jstart:
+                        jaw_landmarks = shape[jstart:jend]
+                        if len(jaw_landmarks) > 2:
+                            jaw = jaw_landmarks[1:-1]
+                        else:
+                            jaw = jaw_landmarks
                     else:
-                        logger.warning(f"Not enough facial landmarks for jaw detection: {len(shape)} points")
+                        logger.warning(f"Not enough facial landmarks for jaw detection: {len(shape)} points (need {jend})")
                         continue
                     
-                    if len(shape) > nend and nend > nstart and len(shape[nstart:nend]) > 2:
-                        nose = shape[nstart:nend][2]
+                    if len(shape) >= nend and nend > nstart:
+                        nose_landmarks = shape[nstart:nend]
+                        if len(nose_landmarks) > 2:
+                            nose = nose_landmarks[2]
+                        else:
+                            logger.warning(f"Not enough nose landmarks: {len(nose_landmarks)} points (need >2)")
+                            continue
                     else:
-                        logger.warning(f"Not enough facial landmarks for nose detection: {len(shape)} points")
+                        logger.warning(f"Not enough facial landmarks for nose detection: {len(shape)} points (need {nend})")
                         continue
 
                 # Get mouth coordinates
@@ -242,11 +251,16 @@ class Wav2LipUHQ:
                 shape = face_utils.shape_to_np(shape)
 
                 # Check bounds before accessing mouth landmarks
-                if len(shape) > mend and mend > mstart and len(shape[mstart:mend]) > 8:
-                    mouth = shape[mstart:mend][:-8]
-                    mouth = np.delete(mouth, [3], axis=0)
+                if len(shape) >= mend and mend > mstart:
+                    mouth_landmarks = shape[mstart:mend]
+                    if len(mouth_landmarks) > 8:
+                        mouth = mouth_landmarks[:-8]
+                        mouth = np.delete(mouth, [3], axis=0)
+                    else:
+                        logger.warning(f"Not enough mouth landmarks: {len(mouth_landmarks)} points (need >8)")
+                        continue
                 else:
-                    logger.warning(f"Not enough facial landmarks for mouth detection: {len(shape)} points")
+                    logger.warning(f"Not enough facial landmarks for mouth detection: {len(shape)} points (need {mend})")
                     continue
                 if self.mouth_mask_dilatation > 0:
                     mouth = self.dilate_mouth(mouth, original_gray.shape[0], original_gray.shape[1])
