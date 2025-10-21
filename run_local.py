@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'core'))
 
 from core.processor import Wav2LipProcessor
+from download_models import download_models, check_models
 
 # Configure logging
 logging.basicConfig(
@@ -22,84 +23,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def download_models():
-    """Download models if they don't exist (same as in predict.py)"""
-    import requests
-    
-    def download_file(url: str, filepath: str, description: str = "file") -> bool:
-        """Download a file from URL if it doesn't exist"""
-        if os.path.exists(filepath):
-            logger.info(f"{description} already exists: {filepath}")
-            return True
-        
-        try:
-            logger.info(f"Downloading {description} from {url}")
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            
-            response = requests.get(url, stream=True)
-            response.raise_for_status()
-            
-            with open(filepath, 'wb') as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            
-            logger.info(f"Successfully downloaded {description}: {filepath}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to download {description}: {e}")
-            return False
-    
-    models_to_download = {
-        # Wav2Lip models
-        "wav2lip_gan.pth": {
-            "url": "https://github.com/anothermartz/Easy-Wav2Lip/releases/download/Prerequesits/Wav2Lip_GAN.pth",
-            "path": "weights/wav2lip/wav2lip_gan.pth",
-            "description": "Wav2Lip GAN model"
-        },
-        "wav2lip.pth": {
-            "url": "https://github.com/anothermartz/Easy-Wav2Lip/releases/download/Prerequesits/Wav2Lip.pth",
-            "path": "weights/wav2lip/wav2lip.pth", 
-            "description": "Wav2Lip model"
-        },
-        # S3FD face detection model
-        "s3fd-619a316812.pth": {
-            "url": "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth",
-            "path": "weights/s3fd/s3fd-619a316812.pth",
-            "description": "S3FD face detection model"
-        },
-        # Dlib landmark predictor
-        "shape_predictor_68_face_landmarks.dat": {
-            "url": "https://github.com/italojs/facial-landmarks-recognition/raw/master/shape_predictor_68_face_landmarks.dat",
-            "path": "weights/predicator/shape_predictor_68_face_landmarks.dat",
-            "description": "Dlib 68-point landmark predictor"
-        }
-    }
-    
-    logger.info("Checking for required models...")
-    missing_models = []
-    
-    for filename, info in models_to_download.items():
-        if not os.path.exists(info["path"]):
-            missing_models.append((filename, info))
-    
-    if not missing_models:
-        logger.info("All required models found!")
-        return True
-    
-    logger.info(f"Found {len(missing_models)} missing models, downloading...")
-    
-    success_count = 0
-    for filename, info in missing_models:
-        if download_file(info["url"], info["path"], info["description"]):
-            success_count += 1
-    
-    if success_count == len(missing_models):
-        logger.info("All models downloaded successfully!")
-        return True
-    else:
-        logger.warning(f"Only {success_count}/{len(missing_models)} models downloaded successfully")
-        return False
 
 def main():
     parser = argparse.ArgumentParser(description="Wav2Lip UHQ Local Test Script")
@@ -144,7 +67,9 @@ def main():
     parser.add_argument("--debug", action="store_true",
                        help="Enable debug logging")
     parser.add_argument("--download-models", action="store_true",
-                       help="Download models if missing")
+                       help="Download models if missing (uses download_models.py)")
+    parser.add_argument("--check-models", action="store_true",
+                       help="Check if models exist without downloading")
     
     args = parser.parse_args()
     
@@ -156,10 +81,17 @@ def main():
         logging.getLogger().setLevel(logging.INFO)
     
     try:
-        # Download models if requested
-        if args.download_models:
+        # Check or download models if requested
+        if args.check_models:
+            logger.info("Checking models...")
+            if not check_models():
+                logger.error("Some models are missing. Use --download-models to download them.")
+                sys.exit(1)
+        elif args.download_models:
             logger.info("Downloading models...")
-            download_models()
+            if not download_models():
+                logger.error("Failed to download models.")
+                sys.exit(1)
         
         # Validate input files
         if not os.path.exists(args.video):
