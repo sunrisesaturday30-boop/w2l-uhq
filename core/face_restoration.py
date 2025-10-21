@@ -95,21 +95,41 @@ class FaceRestoration:
             # Apply face restoration
             if self.model_name == "CodeFormer":
                 # CodeFormer specific processing
-                restored_image, _ = self.model.enhance(
+                result = self.model.enhance(
                     image, 
                     has_aligned=False, 
                     only_center_face=False, 
                     paste_back=True,
                     weight=self.code_former_weight
                 )
+                logger.debug(f"CodeFormer result type: {type(result)}, length: {len(result) if isinstance(result, tuple) else 'N/A'}")
+                # Handle different return formats - CodeFormer can return multiple values
+                if isinstance(result, tuple):
+                    if len(result) >= 1:
+                        restored_image = result[0]
+                    else:
+                        logger.error("CodeFormer returned empty tuple")
+                        return image
+                else:
+                    restored_image = result
             else:
                 # GFPGAN processing
-                restored_image, _ = self.model.enhance(
+                result = self.model.enhance(
                     image, 
                     has_aligned=False, 
                     only_center_face=False, 
                     paste_back=True
                 )
+                logger.debug(f"GFPGAN result type: {type(result)}, length: {len(result) if isinstance(result, tuple) else 'N/A'}")
+                # Handle different return formats - GFPGAN can return multiple values
+                if isinstance(result, tuple):
+                    if len(result) >= 1:
+                        restored_image = result[0]
+                    else:
+                        logger.error("GFPGAN returned empty tuple")
+                        return image
+                else:
+                    restored_image = result
             
             # Ensure output is uint8
             if restored_image.dtype != np.uint8:
