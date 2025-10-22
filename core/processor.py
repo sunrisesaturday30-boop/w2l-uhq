@@ -270,10 +270,14 @@ class Wav2LipProcessor:
             logger.error(f"Mouth-only Wav2Lip processing failed: {str(e)}")
             raise
         
-        # Enhance mouth regions
-        logger.info("Enhancing mouth regions...")
-        enhanced_mouth_crops = self._enhance_mouth_crops(mouth_crops, face_restore_model, 
-                                                       code_former_weight)
+        # Enhance mouth regions (skip if face_restore_model is 'none')
+        if face_restore_model.lower() == 'none':
+            logger.info("Skipping mouth region enhancement...")
+            enhanced_mouth_crops = mouth_crops  # Use original mouth crops
+        else:
+            logger.info("Enhancing mouth regions...")
+            enhanced_mouth_crops = self._enhance_mouth_crops(mouth_crops, face_restore_model, 
+                                                           code_former_weight)
         
         # Reconstruct final video
         final_video = self._reconstruct_video(original_frames, enhanced_mouth_crops, 
