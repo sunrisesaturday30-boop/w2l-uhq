@@ -148,7 +148,7 @@ class Wav2LipProcessor:
     def _extract_mouth_regions(self, video_path):
         """Extract mouth regions directly using dlib landmarks"""
         import dlib
-        from wav2lip.face_detection.api import get_detections_for_batch
+        from wav2lip.face_detection.api import FaceAlignment
         
         logger.info("Extracting mouth regions using facial landmarks...")
         
@@ -159,6 +159,16 @@ class Wav2LipProcessor:
             raise FileNotFoundError(f"dlib predictor not found: {predictor_path}")
         
         predictor = dlib.shape_predictor(predictor_path)
+        
+        # Initialize face alignment for face detection
+        face_align = FaceAlignment(
+            landmarks_type='2D',
+            network_size=4,
+            device=self.device,
+            flip_input=False,
+            face_detector='sfd',
+            verbose=False
+        )
         
         # Read video frames
         cap = cv2.VideoCapture(video_path)
@@ -178,10 +188,10 @@ class Wav2LipProcessor:
         
         for i in range(0, len(frames), self.face_det_batch_size):
             batch_frames = frames[i:i + self.face_det_batch_size]
-            batch_detections = get_detections_for_batch(batch_frames)
+            batch_detections = face_align.get_detections_for_batch(batch_frames)
             
             for j, (frame, detections) in enumerate(zip(batch_frames, batch_detections)):
-                if len(detections) == 0:
+                if detections is None or len(detections) == 0:
                     logger.warning(f"No face detected in frame {i + j}")
                     mouth_crops.append(None)
                     mouth_bboxes.append(None)
@@ -189,7 +199,12 @@ class Wav2LipProcessor:
                 
                 # Use the first (largest) face detection
                 face_bbox = detections[0]
-                x, y, w, h = face_bbox
+                if isinstance(face_bbox, tuple) and len(face_bbox) == 4:
+                    x1, y1, x2, y2 = face_bbox
+                    x, y, w, h = x1, y1, x2 - x1, y2 - y1
+                else:
+                    # Handle other formats if needed
+                    x, y, w, h = face_bbox
                 
                 # Extract face region
                 face_region = frame[y:y+h, x:x+w]
