@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 # Model URLs and paths
 MODELS = {
     'wav2lip_gan': {
-        'url': 'https://github.com/Rudrabha/Wav2Lip/releases/download/v1.0/wav2lip_gan.pth',
+        'url': 'https://github.com/anothermartz/Easy-Wav2Lip/releases/download/Prerequesits/Wav2Lip_GAN.pth',
         'path': 'weights/wav2lip/wav2lip_gan.pth'
     },
     's3fd': {
@@ -16,7 +16,7 @@ MODELS = {
         'path': 'weights/s3fd/s3fd.pth'
     },
     'dlib_predictor': {
-        'url': 'http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2',
+        'url': 'https://github.com/italojs/facial-landmarks-recognition/raw/master/shape_predictor_68_face_landmarks.dat',
         'path': 'weights/predicator/shape_predictor_68_face_landmarks.dat'
     },
     'codeformer': {
