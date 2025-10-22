@@ -20,7 +20,9 @@ class FaceRestoration:
             return  # Model already loaded
             
         try:
-            if model_name == 'CodeFormer':
+            # Normalize model name to handle case variations
+            model_name_lower = model_name.lower()
+            if model_name_lower == 'codeformer':
                 from basicsr.archs.codeformer_arch import CodeFormer
                 from basicsr.utils.realesrgan_utils import RealESRGANer
                 from facexlib.utils.face_restoration_helper import FaceRestoreHelper
@@ -42,7 +44,7 @@ class FaceRestoration:
                 self.model.load_state_dict(checkpoint['params_ema'])
                 self.model.eval()
                 
-            elif model_name == 'GFPGAN':
+            elif model_name_lower == 'gfpgan':
                 from gfpgan import GFPGANer
                 
                 model_path = os.path.join('weights', 'gfpgan', 'GFPGANv1.4.pth')
@@ -57,6 +59,10 @@ class FaceRestoration:
                     bg_upsampler=None,
                     device=self.device
                 )
+                
+            elif model_name_lower == 'none':
+                # No face restoration model
+                self.model = None
                 
             else:
                 raise ValueError(f"Unknown face restoration model: {model_name}")
@@ -73,7 +79,11 @@ class FaceRestoration:
         try:
             self._load_model(model_name)
             
-            if model_name == 'CodeFormer':
+            # If no model is loaded, return original image
+            if self.model is None:
+                return image
+            
+            if model_name.lower() == 'codeformer':
                 # Convert to PIL Image for CodeFormer
                 if isinstance(image, np.ndarray):
                     pil_image = Image.fromarray(image)
@@ -103,7 +113,7 @@ class FaceRestoration:
                     # Convert PIL Image to numpy array
                     restored_image = np.array(restored_image)
                     
-            elif model_name == 'GFPGAN':
+            elif model_name.lower() == 'gfpgan':
                 # GFPGAN expects numpy array
                 if isinstance(image, Image.Image):
                     image = np.array(image)
