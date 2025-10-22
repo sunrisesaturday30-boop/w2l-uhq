@@ -199,12 +199,23 @@ class Wav2LipProcessor:
                 
                 # Use the first (largest) face detection
                 face_bbox = detections[0]
+                logger.debug(f"Face bbox type: {type(face_bbox)}, value: {face_bbox}")
+                
                 if isinstance(face_bbox, tuple) and len(face_bbox) == 4:
                     x1, y1, x2, y2 = face_bbox
                     x, y, w, h = x1, y1, x2 - x1, y2 - y1
+                elif isinstance(face_bbox, (list, np.ndarray)) and len(face_bbox) == 4:
+                    x1, y1, x2, y2 = face_bbox
+                    x, y, w, h = x1, y1, x2 - x1, y2 - y1
+                elif isinstance(face_bbox, (list, np.ndarray)) and len(face_bbox) >= 4:
+                    # Handle arrays with more than 4 elements (confidence scores, etc.)
+                    x1, y1, x2, y2 = face_bbox[:4]
+                    x, y, w, h = x1, y1, x2 - x1, y2 - y1
                 else:
-                    # Handle other formats if needed
-                    x, y, w, h = face_bbox
+                    logger.warning(f"Unexpected face bbox format: {type(face_bbox)} = {face_bbox}")
+                    mouth_crops.append(None)
+                    mouth_bboxes.append(None)
+                    continue
                 
                 # Extract face region
                 face_region = frame[y:y+h, x:x+w]

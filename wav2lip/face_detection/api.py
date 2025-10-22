@@ -87,9 +87,20 @@ class FaceAlignment:
             else:
                 results.append(None)
                 continue
+            
+            # Debug logging
+            print(f"Detection {i}: type={type(d)}, shape={getattr(d, 'shape', 'N/A')}, len={len(d)}, value={d}")
+            
             d = np.clip(d, 0, None)
 
-            x1, y1, x2, y2 = map(int, d[:-1])
+            # Handle different detection formats
+            if len(d) >= 4:
+                x1, y1, x2, y2 = map(int, d[:4])
+            else:
+                # If we don't have enough coordinates, skip this detection
+                print(f"Not enough coordinates in detection {i}: {d}")
+                results.append(None)
+                continue
             results.append((x1, y1, x2, y2))
 
         return results
