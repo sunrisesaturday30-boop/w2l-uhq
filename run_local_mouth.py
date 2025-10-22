@@ -126,10 +126,10 @@ def main():
         result_path = processor.process_video(
             video_path=args.video,
             audio_path=args.audio,
-            face_restore=args.face_restore,
+            face_restore_model=args.face_restore,
             only_mouth=True,  # Always True for mouth-only mode
-            mask_dilate=args.mask_dilate,
-            mask_blur=args.mask_blur,
+            mouth_mask_dilatation=args.mask_dilate,
+            erode_face_mask=args.mask_blur,  # Map mask_blur to erode_face_mask
             pad_top=args.pad_top,
             pad_bottom=args.pad_bottom,
             pad_left=args.pad_left,
