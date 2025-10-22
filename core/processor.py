@@ -191,14 +191,25 @@ class Wav2LipProcessor:
             batch_detections = face_align.get_detections_for_batch(batch_frames)
             
             for j, (frame, detections) in enumerate(zip(batch_frames, batch_detections)):
-                if detections is None or len(detections) == 0:
+                logger.debug(f"Frame {i + j}: detections type={type(detections)}, value={detections}")
+                
+                if detections is None:
                     logger.warning(f"No face detected in frame {i + j}")
                     mouth_crops.append(None)
                     mouth_bboxes.append(None)
                     continue
                 
-                # Use the first (largest) face detection
-                face_bbox = detections[0]
+                # Handle case where detections is a single tuple (not a list)
+                if isinstance(detections, tuple):
+                    face_bbox = detections
+                elif isinstance(detections, (list, np.ndarray)) and len(detections) > 0:
+                    face_bbox = detections[0]
+                else:
+                    logger.warning(f"Unexpected detections format in frame {i + j}: {type(detections)} = {detections}")
+                    mouth_crops.append(None)
+                    mouth_bboxes.append(None)
+                    continue
+                
                 logger.debug(f"Face bbox type: {type(face_bbox)}, value: {face_bbox}")
                 
                 if isinstance(face_bbox, tuple) and len(face_bbox) == 4:
