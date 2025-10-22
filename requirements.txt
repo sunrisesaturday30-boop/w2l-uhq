@@ -1,0 +1,19 @@
+# Wav2Lip UHQ Dependencies
+torch>=2.4.0
+torchvision
+numpy
+opencv-python
+opencv-contrib-python
+pillow
+librosa
+scipy
+dlib-bin
+imutils
+tqdm
+numba
+imageio_ffmpeg
+requests
+basicsr
+facexlib
+gfpgan
+realesrgan
