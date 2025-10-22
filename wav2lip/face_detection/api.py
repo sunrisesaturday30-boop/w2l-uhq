@@ -1,5 +1,6 @@
 from __future__ import print_function
 from enum import Enum
+import numpy as np
 
 try:
     import urllib.request as request_file
@@ -64,7 +65,15 @@ class FaceAlignment:
         self.face_detector = face_detector_module.FaceDetector(device=device, verbose=verbose)
 
     def get_detections_for_batch(self, images):
-        images = images[..., ::-1]
+        # Convert list of frames to numpy array if needed
+        if isinstance(images, list):
+            # Convert list to numpy array
+            images = np.array(images)
+        
+        # Apply BGR to RGB conversion if it's a numpy array
+        if isinstance(images, np.ndarray):
+            images = images[..., ::-1]
+        
         detected_faces = self.face_detector.detect_from_batch(images.copy())
         results = []
 
